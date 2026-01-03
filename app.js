@@ -1322,4 +1322,4 @@ rebuildGroupFilter();
 renderAll();
 
 // Apply lock if PIN set
-if (hasPin()) showLock();
+if (hasPin()) showLock(); else hideLock();

@@ -344,3 +344,7 @@ body{
 @media (max-width: 560px){
   .grid{grid-template-columns: 1fr;}
 }
+
+
+/* Fix: ensure lock respects .hidden */
+.lock.hidden{display:none !important}
