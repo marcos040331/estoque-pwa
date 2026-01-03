@@ -1,5 +1,5 @@
-// ====== Estoque Pro (PWA Offline) ======
-const STORAGE_KEY = "estoque_pro_pwa_v2";
+// ====== Estoque Pro (PWA Offline) v3 ======
+const STORAGE_KEY = "estoque_pro_pwa_v3";
 const DEFAULT_LOW_LIMIT = 2;
 
 const SORT_MODES = [
@@ -23,54 +23,74 @@ function safeNum(v, fallback=0){
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
+function parseOptionalMoney(v){
+  const s = (v ?? "").toString().trim();
+  if (!s) return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return NaN;
+  return n;
+}
 
+// ====== Load with migration (v1/v2) ======
 function loadProducts(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const data = raw ? JSON.parse(raw) : [];
-    const arr = Array.isArray(data) ? data : [];
-    return arr.map((p, i) => {
-      if (p && typeof p === "object"){
-        if ("nome" in p || "modelo" in p){
+  const tryKeys = [STORAGE_KEY, "estoque_pro_pwa_v2", "estoque_pwa"];
+  for (const key of tryKeys){
+    try{
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const data = JSON.parse(raw);
+      const arr = Array.isArray(data) ? data : (Array.isArray(data?.products) ? data.products : null);
+      if (!arr) continue;
+
+      const mapped = arr.map((p, i) => {
+        if (!p || typeof p !== "object") return null;
+
+        if ("nome" in p || "modelo" in p || "grupo" in p){
           return {
             id: safeNum(p.id, Date.now() + i),
+            grupo: (p.grupo || "").toString(),
             modelo: (p.modelo || "").toString(),
             nome: (p.nome || "").toString(),
             descricao: (p.descricao || "").toString(),
-            valor: safeNum(p.valor, 0),
+            valor: (p.valor === null || p.valor === undefined || p.valor === "") ? null : (Number.isFinite(Number(p.valor)) ? Number(p.valor) : 0),
             quantidade: Math.max(0, safeNum(p.quantidade, 0)),
             limite: Math.max(0, safeNum(p.limite, DEFAULT_LOW_LIMIT)),
             atualizado_em: (p.atualizado_em || nowIso()).toString(),
           };
         }
+
+        // v1: {descricao, valor, quantidade}
         return {
           id: safeNum(p.id, Date.now() + i),
+          grupo: "Películas",
           modelo: "",
           nome: (p.descricao || p.nome || "").toString(),
           descricao: "",
-          valor: safeNum(p.valor, 0),
+          valor: ("valor" in p) ? (Number.isFinite(Number(p.valor)) ? Number(p.valor) : 0) : null,
           quantidade: Math.max(0, safeNum(p.quantidade, 0)),
           limite: DEFAULT_LOW_LIMIT,
           atualizado_em: (p.atualizado_em || nowIso()).toString(),
         };
-      }
-      return null;
-    }).filter(Boolean);
-  }catch{
-    return [];
+      }).filter(Boolean);
+
+      return mapped;
+    }catch{}
   }
+  return [];
 }
 
 let products = loadProducts();
 let searchText = "";
 
-// UI refs
+// ====== UI refs ======
 const elList = document.getElementById("list");
 const elSearch = document.getElementById("search");
+
 const kpiProdutos = document.getElementById("kpiProdutos");
 const kpiQtd = document.getElementById("kpiQtd");
 const kpiBaixo = document.getElementById("kpiBaixo");
 const kpiValor = document.getElementById("kpiValor");
+
 const btnSort = document.getElementById("btnSort");
 const sortLabel = document.getElementById("sortLabel");
 const btnOnlyLow = document.getElementById("btnOnlyLow");
@@ -88,6 +108,7 @@ const btnPlus = document.getElementById("btnPlus");
 
 const form = document.getElementById("form");
 const productId = document.getElementById("productId");
+const grupo = document.getElementById("grupo");
 const modelo = document.getElementById("modelo");
 const nome = document.getElementById("nome");
 const descricao = document.getElementById("descricao");
@@ -98,15 +119,16 @@ const limite = document.getElementById("limite");
 const btnBackup = document.getElementById("btnBackup");
 const fileRestore = document.getElementById("fileRestore");
 
+// ====== Storage ======
 function saveProducts(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
 }
-
 function nextId(){
   const max = products.reduce((acc, p) => Math.max(acc, safeNum(p.id, 0)), 0);
   return max + 1;
 }
 
+// ====== Rules ======
 function getLowLimit(p){
   const lim = safeNum(p.limite, DEFAULT_LOW_LIMIT);
   return Math.max(0, lim);
@@ -120,9 +142,11 @@ function isZero(p){
   return safeNum(p.quantidade, 0) === 0;
 }
 function productTitle(p){
+  const g = (p.grupo || "").trim();
   const m = (p.modelo || "").trim();
   const n = (p.nome || "").trim();
-  return m ? `${m} • ${n}` : n;
+  const left = m ? `${m} • ${n}` : n;
+  return g ? `${g} — ${left}` : left;
 }
 function productSub(p){
   const d = (p.descricao || "").trim();
@@ -130,10 +154,11 @@ function productSub(p){
 }
 function matchesSearch(p, q){
   if (!q) return true;
-  const blob = normalize([p.modelo, p.nome, p.descricao].join(" "));
+  const blob = normalize([p.grupo, p.modelo, p.nome, p.descricao].join(" "));
   return blob.includes(q);
 }
 
+// ====== Sorting ======
 function applySort(arr){
   if (sortMode === "az"){
     return arr.sort((a,b) => normalize(productTitle(a)).localeCompare(normalize(productTitle(b))));
@@ -148,7 +173,6 @@ function applySort(arr){
     return normalize(productTitle(a)).localeCompare(normalize(productTitle(b)));
   });
 }
-
 function filteredProducts(){
   const q = normalize(searchText);
   let arr = products.filter(p => matchesSearch(p, q));
@@ -156,12 +180,12 @@ function filteredProducts(){
   return applySort(arr);
 }
 
+// ====== Helpers ======
 function escapeHtml(str){
   return (str || "").toString()
     .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
     .replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
-
 function formatDate(iso){
   if (!iso) return "—";
   try{
@@ -173,11 +197,15 @@ function formatDate(iso){
   }
 }
 
+// ====== Render ======
 function renderKpis(){
   const totalProdutos = products.length;
   const totalQtd = products.reduce((acc,p) => acc + safeNum(p.quantidade, 0), 0);
   const baixo = products.filter(p => isLow(p) || isZero(p)).length;
-  const valorEst = products.reduce((acc,p) => acc + (safeNum(p.valor,0) * safeNum(p.quantidade,0)), 0);
+  const valorEst = products.reduce((acc,p) => {
+    const money = (p.valor === null || p.valor === undefined) ? 0 : safeNum(p.valor, 0);
+    return acc + (money * safeNum(p.quantidade,0));
+  }, 0);
 
   kpiProdutos.textContent = String(totalProdutos);
   kpiQtd.textContent = String(totalQtd);
@@ -206,7 +234,11 @@ function renderList(){
 
     const badges = [];
     badges.push(`<span class="badge">Qtd: <b>${q}</b></span>`);
-    badges.push(`<span class="badge">${formatBRL(p.valor)}</span>`);
+    if (p.valor === null || p.valor === undefined || p.valor === ""){
+      badges.push(`<span class="badge">Sem preço</span>`);
+    }else{
+      badges.push(`<span class="badge">${formatBRL(p.valor)}</span>`);
+    }
     if (isZero(p)) badges.push(`<span class="badge danger">ZERADO</span>`);
     else if (isLow(p)) badges.push(`<span class="badge warn">BAIXO (≤ ${lim})</span>`);
 
@@ -259,6 +291,7 @@ function renderAll(){
   updateUiLabels();
 }
 
+// ====== Quick adjust ======
 function quickAdjust(id, delta){
   const idx = products.findIndex(p => String(p.id) === String(id));
   if (idx < 0) return;
@@ -269,6 +302,7 @@ function quickAdjust(id, delta){
   renderAll();
 }
 
+// ====== Modal ======
 function openModal(){
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden","false");
@@ -277,11 +311,11 @@ function closeModal(){
   modal.classList.add("hidden");
   modal.setAttribute("aria-hidden","true");
 }
-
 function openNew(){
   modalTitle.textContent = "Novo produto";
   modalSubtitle.textContent = "Cadastro rápido";
   productId.value = "";
+  grupo.value = "Películas";
   modelo.value = "";
   nome.value = "";
   descricao.value = "";
@@ -294,7 +328,6 @@ function openNew(){
   openModal();
   setTimeout(() => nome.focus(), 50);
 }
-
 function openEdit(id){
   const p = products.find(x => String(x.id) === String(id));
   if (!p) return;
@@ -303,10 +336,11 @@ function openEdit(id){
   modalSubtitle.textContent = `ID: ${p.id}`;
 
   productId.value = p.id;
+  grupo.value = (p.grupo || "");
   modelo.value = (p.modelo || "");
   nome.value = (p.nome || "");
   descricao.value = (p.descricao || "");
-  valor.value = safeNum(p.valor, 0);
+  valor.value = (p.valor === null || p.valor === undefined) ? "" : String(p.valor);
   quantidade.value = safeNum(p.quantidade, 0);
   limite.value = String(getLowLimit(p));
 
@@ -334,28 +368,30 @@ btnClose.addEventListener("click", closeModal);
 btnCancel.addEventListener("click", closeModal);
 modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
 
+// ====== Submit ======
 form.addEventListener("submit", (e) => {
   e.preventDefault();
 
   const id = productId.value ? safeNum(productId.value) : null;
+  const g = (grupo.value || "").trim();
   const m = (modelo.value || "").trim();
   const n = (nome.value || "").trim();
   const d = (descricao.value || "").trim();
 
-  const v = safeNum(valor.value, NaN);
+  const money = parseOptionalMoney(valor.value);
   const q = Math.max(0, safeNum(quantidade.value, NaN));
   const lim = Math.max(0, safeNum(limite.value, DEFAULT_LOW_LIMIT));
 
   if (!n){ alert("Informe o nome do produto."); return; }
-  if (!Number.isFinite(v) || v < 0){ alert("Informe um valor válido."); return; }
   if (!Number.isFinite(q) || q < 0){ alert("Informe uma quantidade válida."); return; }
+  if (Number.isNaN(money)){ alert("Valor inválido (ou deixe em branco)."); return; }
 
   if (id === null){
-    products.push({ id: nextId(), modelo: m, nome: n, descricao: d, valor: v, quantidade: q, limite: lim, atualizado_em: nowIso() });
+    products.push({ id: nextId(), grupo: g, modelo: m, nome: n, descricao: d, valor: money, quantidade: q, limite: lim, atualizado_em: nowIso() });
   }else{
     const idx = products.findIndex(p => safeNum(p.id) === id);
     if (idx >= 0){
-      products[idx] = { ...products[idx], modelo: m, nome: n, descricao: d, valor: v, quantidade: q, limite: lim, atualizado_em: nowIso() };
+      products[idx] = { ...products[idx], grupo: g, modelo: m, nome: n, descricao: d, valor: money, quantidade: q, limite: lim, atualizado_em: nowIso() };
     }
   }
 
@@ -375,9 +411,19 @@ btnDelete.addEventListener("click", () => {
   renderAll();
 });
 
+// ====== Search behavior ======
 elSearch.addEventListener("input", (e) => {
   searchText = e.target.value || "";
   renderList();
+});
+
+// Enter opens first result
+elSearch.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const arr = filteredProducts();
+  if (arr.length > 0) openEdit(arr[0].id);
+  else openNew();
 });
 
 function updateUiLabels(){
@@ -385,7 +431,6 @@ function updateUiLabels(){
   sortLabel.textContent = mode.label;
   onlyLowLabel.textContent = onlyLow ? "Só baixo" : "Todos";
 }
-
 btnSort.addEventListener("click", () => {
   const idx = SORT_MODES.findIndex(m => m.id === sortMode);
   const next = SORT_MODES[(idx + 1) % SORT_MODES.length];
@@ -394,19 +439,17 @@ btnSort.addEventListener("click", () => {
   renderList();
   updateUiLabels();
 });
-
 btnOnlyLow.addEventListener("click", () => {
   onlyLow = !onlyLow;
   localStorage.setItem("estoque_only_low", onlyLow ? "1" : "0");
   renderList();
   updateUiLabels();
 });
-
 fabAdd.addEventListener("click", openNew);
 
-// Backup / Restore
+// ====== Backup / Restore ======
 btnBackup.addEventListener("click", () => {
-  const payload = { app: "estoque-pro-pwa", version: 2, exported_at: nowIso(), products };
+  const payload = { app: "estoque-pro-pwa", version: 3, exported_at: nowIso(), products };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -417,7 +460,6 @@ btnBackup.addEventListener("click", () => {
   a.remove();
   URL.revokeObjectURL(url);
 });
-
 fileRestore.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
@@ -426,29 +468,34 @@ fileRestore.addEventListener("change", async (e) => {
     const incoming = Array.isArray(data) ? data : data.products;
     if (!Array.isArray(incoming)) throw new Error("inv");
     const sanitized = incoming.map((p,i) => {
-      if (p && typeof p === "object" && ("nome" in p || "modelo" in p)){
+      if (p && typeof p === "object"){
+        if ("nome" in p || "modelo" in p || "grupo" in p){
+          return {
+            id: safeNum(p.id, Date.now() + i),
+            grupo: (p.grupo || "").toString(),
+            modelo: (p.modelo || "").toString(),
+            nome: (p.nome || "").toString(),
+            descricao: (p.descricao || "").toString(),
+            valor: (p.valor === null || p.valor === undefined || p.valor === "") ? null : (Number.isFinite(Number(p.valor)) ? Number(p.valor) : 0),
+            quantidade: Math.max(0, safeNum(p.quantidade, 0)),
+            limite: Math.max(0, safeNum(p.limite, DEFAULT_LOW_LIMIT)),
+            atualizado_em: (p.atualizado_em || nowIso()).toString(),
+          };
+        }
         return {
           id: safeNum(p.id, Date.now() + i),
-          modelo: (p.modelo || "").toString(),
-          nome: (p.nome || "").toString(),
-          descricao: (p.descricao || "").toString(),
-          valor: safeNum(p.valor, 0),
+          grupo: "Películas",
+          modelo: "",
+          nome: (p.descricao || p.nome || "").toString(),
+          descricao: "",
+          valor: ("valor" in p) ? (Number.isFinite(Number(p.valor)) ? Number(p.valor) : 0) : null,
           quantidade: Math.max(0, safeNum(p.quantidade, 0)),
-          limite: Math.max(0, safeNum(p.limite, DEFAULT_LOW_LIMIT)),
+          limite: DEFAULT_LOW_LIMIT,
           atualizado_em: (p.atualizado_em || nowIso()).toString(),
         };
       }
-      return {
-        id: safeNum(p.id, Date.now() + i),
-        modelo: "",
-        nome: (p.descricao || p.nome || "").toString(),
-        descricao: "",
-        valor: safeNum(p.valor, 0),
-        quantidade: Math.max(0, safeNum(p.quantidade, 0)),
-        limite: DEFAULT_LOW_LIMIT,
-        atualizado_em: (p.atualizado_em || nowIso()).toString(),
-      };
-    });
+      return null;
+    }).filter(Boolean);
     if (!confirm(`Restaurar ${sanitized.length} produto(s)? Isso substitui seu estoque atual.`)) return;
     products = sanitized;
     saveProducts();

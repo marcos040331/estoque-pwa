@@ -51,7 +51,7 @@
       <div class="panel-header">
         <div class="searchbox">
           <span class="icon">🔎</span>
-          <input id="search" class="input" type="text" placeholder="Buscar... (modelo, nome, ex: A14, iPhone 11, 3D)">
+          <input id="search" class="input" type="text" placeholder="Buscar... (grupo, modelo, nome, ex: Películas, A14, 3D)">
         </div>
 
         <div class="filters">
@@ -65,7 +65,7 @@
       </div>
 
       <div class="hint">
-        Dica: toque em <b>-1</b> quando vender e <b>+1</b> quando repor. Clique no card para editar.
+        Enter na busca abre o primeiro resultado. Toque em <b>-1</b> quando vender e <b>+1</b> quando repor. Clique no card para editar.
       </div>
 
       <ul id="list" class="grid"></ul>
@@ -87,7 +87,11 @@
       <form id="form" class="form">
         <input type="hidden" id="productId" />
 
-        <div class="grid2">
+        <div class="grid3">
+          <div>
+            <label class="label">Grupo (ex: Películas, Eletrônicos)</label>
+            <input id="grupo" class="input" type="text" placeholder="Películas" />
+          </div>
           <div>
             <label class="label">Modelo (ex: A14, iPhone 11)</label>
             <input id="modelo" class="input" type="text" placeholder="A14" />
@@ -103,8 +107,8 @@
 
         <div class="grid3">
           <div>
-            <label class="label">Valor (R$)</label>
-            <input id="valor" class="input" type="number" step="0.01" min="0" placeholder="25.00" required />
+            <label class="label">Valor (R$) — opcional</label>
+            <input id="valor" class="input" type="number" step="0.01" min="0" placeholder="25.00" />
           </div>
           <div>
             <label class="label">Quantidade</label>
