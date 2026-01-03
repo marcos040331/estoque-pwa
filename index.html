@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#111827" />
+  <title>Estoque Offline</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<header class="header">
+  <h1>Estoque</h1>
+  <div>
+    <button id="btnBackup">Backup</button>
+    <input id="fileRestore" type="file" accept="application/json">
+  </div>
+</header>
+
+<main>
+  <input id="search" placeholder="Pesquisar produto..." />
+  <button id="btnAdd">+ Adicionar</button>
+  <ul id="list"></ul>
+</main>
+
+<div id="modal" class="hidden">
+  <form id="form">
+    <input type="hidden" id="productId">
+    <input id="descricao" placeholder="Descrição" required>
+    <input id="valor" type="number" step="0.01" placeholder="Valor" required>
+    <input id="quantidade" type="number" step="1" placeholder="Quantidade" required>
+    <button type="submit">Salvar</button>
+    <button type="button" id="btnDelete">Excluir</button>
+    <button type="button" id="btnCancel">Cancelar</button>
+  </form>
+</div>
+
+<script src="./app.js"></script>
+</body>
+</html>

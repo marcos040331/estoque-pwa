@@ -1,0 +1,5 @@
+body{font-family:Arial;background:#0b1220;color:#fff;margin:0;padding:10px}
+input,button{padding:8px;margin:4px}
+.hidden{display:none}
+ul{list-style:none;padding:0}
+li{border:1px solid #333;padding:8px;margin:4px 0}
