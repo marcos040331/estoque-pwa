@@ -14,11 +14,21 @@
       <div class="logo">EP</div>
       <div>
         <div class="brand-title">Estoque Pro</div>
-        <div class="brand-sub">Offline • PWA • CRUD rápido</div>
+        <div class="brand-sub">Offline • PWA • CRUD</div>
       </div>
     </div>
 
     <div class="top-actions">
+      <button id="btnConfig" class="btn ghost" type="button" title="Configurações">Config</button>
+      <button id="btnGroups" class="btn ghost" type="button" title="Gerenciar grupos">Grupos</button>
+      <button id="btnMoves" class="btn ghost" type="button" title="Movimentações">Movs</button>
+
+      <button id="btnExportCSV" class="btn ghost" type="button" title="Exportar CSV">CSV</button>
+      <label class="btn ghost file" title="Importar CSV (itens)">
+        Importar CSV
+        <input id="fileImportCSV" type="file" accept=".csv,text/csv">
+      </label>
+
       <button id="btnBackup" class="btn ghost" type="button" title="Exportar backup (.json)">Backup</button>
       <label class="btn ghost file" title="Importar backup (.json)">
         Restaurar
@@ -30,8 +40,8 @@
   <main class="container">
     <section class="kpis">
       <div class="kpi-card">
-        <div class="kpi-title">Produtos</div>
-        <div id="kpiProdutos" class="kpi-value">0</div>
+        <div class="kpi-title">Itens</div>
+        <div id="kpiItens" class="kpi-value">0</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-title">Quantidade total</div>
@@ -47,14 +57,33 @@
       </div>
     </section>
 
+    <section id="lowPanel" class="panel subtle hidden">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="dot warn"></span>
+          Itens com baixo estoque
+          <span id="lowCount" class="chip">0</span>
+        </div>
+        <div class="filters">
+          <button id="btnNotif" class="btn ghost" type="button" title="Notificações de baixo estoque">Notificações</button>
+        </div>
+      </div>
+      <div id="lowList" class="lowlist"></div>
+    </section>
+
     <section class="panel">
       <div class="panel-header">
         <div class="searchbox">
           <span class="icon">🔎</span>
-          <input id="search" class="input" type="text" placeholder="Buscar... (grupo, modelo, nome, ex: Películas, A14, 3D)">
+          <input id="search" class="input bare" type="text" placeholder="Buscar por grupo, modelo, nome, local ou descrição…">
+          <button id="btnSearch" class="iconbtn" type="button" title="Buscar (igual Enter)">↵</button>
         </div>
 
         <div class="filters">
+          <select id="groupFilter" class="input select" title="Filtrar por grupo">
+            <!-- options via JS -->
+          </select>
+
           <button id="btnSort" class="btn ghost" type="button" title="Alternar ordenação">
             Ordenar: <span id="sortLabel">Baixo estoque</span>
           </button>
@@ -65,50 +94,71 @@
       </div>
 
       <div class="hint">
-        Enter na busca abre o primeiro resultado. Toque em <b>-1</b> quando vender e <b>+1</b> quando repor. Clique no card para editar.
+        Dica: digite e aperte <b>Enter</b> (ou botão ↵) para abrir o primeiro resultado.
+        Toque em <b>-1</b> quando vender e <b>+1</b> quando repor. Clique no card para editar.
       </div>
 
       <ul id="list" class="grid"></ul>
     </section>
   </main>
 
-  <button id="fabAdd" class="fab" type="button" aria-label="Adicionar produto">＋</button>
+  <button id="fabAdd" class="fab" type="button" aria-label="Adicionar item">＋</button>
 
+  <!-- Modal Item -->
   <div id="modal" class="modal hidden" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-titlebar">
         <div>
-          <div id="modalTitle" class="modal-title">Novo produto</div>
+          <div id="modalTitle" class="modal-title">Novo item</div>
           <div id="modalSubtitle" class="modal-subtitle">Cadastro rápido</div>
         </div>
         <button id="btnClose" class="btn ghost" type="button" aria-label="Fechar">✕</button>
       </div>
 
       <form id="form" class="form">
-        <input type="hidden" id="productId" />
+        <input type="hidden" id="itemId" />
 
         <div class="grid3">
           <div>
-            <label class="label">Grupo (ex: Películas, Eletrônicos)</label>
-            <input id="grupo" class="input" type="text" placeholder="Películas" />
+            <label class="label">Grupo</label>
+            <select id="grupo" class="input select"></select>
+            <div class="minihelp">Use “+ Novo grupo…” no final da lista.</div>
           </div>
           <div>
-            <label class="label">Modelo (ex: A14, iPhone 11)</label>
-            <input id="modelo" class="input" type="text" placeholder="A14" />
+            <label class="label">Modelo / Variação (opcional)</label>
+            <input id="modelo" class="input" type="text" placeholder="Ex: 20cm / Preto / iPhone 11" />
           </div>
           <div>
-            <label class="label">Nome (ex: Película 3D, Privacidade)</label>
-            <input id="nome" class="input" type="text" placeholder="Película 3D" required />
+            <label class="label">Nome</label>
+            <input id="nome" class="input" type="text" placeholder="Ex: Cabo USB / Mouse / Parafuso" required />
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <label class="label">Local (opcional)</label>
+            <input id="local" class="input" type="text" placeholder="Ex: Caixa 3 / Gaveta A / Prateleira 2" />
+          </div>
+          <div>
+            <label class="label">Foto (opcional)</label>
+            <div class="photo-row">
+              <label class="btn ghost file">
+                Enviar foto
+                <input id="fotoFile" type="file" accept="image/*" capture="environment">
+              </label>
+              <button id="btnClearFoto" class="btn ghost" type="button">Remover</button>
+              <span id="fotoStatus" class="minihelp">Sem foto</span>
+            </div>
           </div>
         </div>
 
         <label class="label">Descrição (opcional)</label>
-        <input id="descricao" class="input" type="text" placeholder="Ex: observações..." />
+        <input id="descricao" class="input" type="text" placeholder="Observações, código interno..." />
 
         <div class="grid3">
           <div>
             <label class="label">Valor (R$) — opcional</label>
-            <input id="valor" class="input" type="number" step="0.01" min="0" placeholder="25.00" />
+            <input id="valor" class="input" type="number" step="0.01" min="0" placeholder="Ex: 25.00" />
           </div>
           <div>
             <label class="label">Quantidade</label>
@@ -127,10 +177,136 @@
         </div>
       </form>
 
-      <div class="modal-footer">
-        <button id="btnMinus" class="btn ghost" type="button">-1 Venda</button>
-        <button id="btnPlus" class="btn ghost" type="button">+1 Repor</button>
+      <div class="modal-footer split">
+        <div class="left">
+          <button id="btnHistory" class="btn ghost" type="button">Histórico</button>
+        </div>
+        <div class="right">
+          <button id="btnMinus" class="btn ghost" type="button">-1 Venda</button>
+          <button id="btnPlus" class="btn ghost" type="button">+1 Repor</button>
+        </div>
       </div>
+
+      <div id="historyBox" class="history hidden">
+        <div class="history-head">
+          <div class="panel-title"><span class="dot"></span> Movimentações do item</div>
+          <button id="btnHistoryClose" class="btn ghost" type="button">Fechar</button>
+        </div>
+        <div class="row">
+          <input id="moveNote" class="input" type="text" placeholder="Observação rápida (ex: venda balcão / reposição)" />
+          <button id="btnAddVenda" class="btn danger" type="button">Registrar venda (-1)</button>
+          <button id="btnAddRepo" class="btn primary" type="button">Registrar reposição (+1)</button>
+        </div>
+        <div id="historyList" class="history-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Grupos -->
+  <div id="groupsModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-titlebar">
+        <div>
+          <div class="modal-title">Grupos</div>
+          <div class="modal-subtitle">Criar, renomear, excluir</div>
+        </div>
+        <button id="btnGroupsClose" class="btn ghost" type="button" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="form">
+        <div class="row">
+          <input id="groupNewName" class="input" type="text" placeholder="Novo grupo (ex: Ferramentas, Informática)" />
+          <button id="btnGroupAdd" class="btn primary" type="button">Adicionar</button>
+        </div>
+
+        <div class="minihelp">
+          Excluir um grupo move os itens dele para “Sem grupo”.
+        </div>
+
+        <div id="groupsList" class="groups-list"></div>
+
+        <div class="row end">
+          <button id="btnGroupsOk" class="btn ghost" type="button">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Movimentações (geral) -->
+  <div id="movesModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-titlebar">
+        <div>
+          <div class="modal-title">Movimentações</div>
+          <div class="modal-subtitle">Últimas operações (vendas/reposições)</div>
+        </div>
+        <button id="btnMovesClose" class="btn ghost" type="button" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="form">
+        <div class="row">
+          <button id="btnMovesCSV" class="btn ghost" type="button">Exportar movs CSV</button>
+          <button id="btnMovesClear" class="btn danger" type="button">Limpar histórico</button>
+        </div>
+        <div id="movesList" class="history-list"></div>
+
+        <div class="row end">
+          <button id="btnMovesOk" class="btn ghost" type="button">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Config -->
+  <div id="configModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-titlebar">
+        <div>
+          <div class="modal-title">Configurações</div>
+          <div class="modal-subtitle">Segurança e notificações</div>
+        </div>
+        <button id="btnConfigClose" class="btn ghost" type="button" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="form">
+        <div class="panel subtle">
+          <div class="panel-header">
+            <div class="panel-title"><span class="dot"></span> Bloqueio por PIN</div>
+          </div>
+          <div class="row">
+            <input id="pinNew" class="input" type="password" inputmode="numeric" placeholder="Novo PIN (4 a 8 dígitos)" />
+            <button id="btnSetPin" class="btn primary" type="button">Salvar PIN</button>
+            <button id="btnRemovePin" class="btn danger" type="button">Remover PIN</button>
+          </div>
+          <div class="minihelp">Se você definir um PIN, o app vai pedir o PIN ao abrir.</div>
+        </div>
+
+        <div class="panel subtle">
+          <div class="panel-header">
+            <div class="panel-title"><span class="dot warn"></span> Notificações</div>
+          </div>
+          <div class="row">
+            <button id="btnEnableNotif" class="btn ghost" type="button">Ativar permissões</button>
+            <button id="btnTestNotif" class="btn ghost" type="button">Testar notificação</button>
+          </div>
+          <div class="minihelp">As notificações funcionam melhor quando instalado como app (PWA).</div>
+        </div>
+
+        <div class="row end">
+          <button id="btnConfigOk" class="btn ghost" type="button">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lock Screen -->
+  <div id="lock" class="lock hidden" aria-hidden="true">
+    <div class="lock-card">
+      <div class="lock-title">Estoque Pro</div>
+      <div class="lock-sub">Digite seu PIN para entrar</div>
+      <input id="pinInput" class="input" type="password" inputmode="numeric" placeholder="PIN" />
+      <button id="btnUnlock" class="btn primary" type="button">Entrar</button>
+      <div id="lockMsg" class="minihelp"></div>
     </div>
   </div>
 
