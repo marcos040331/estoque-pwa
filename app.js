@@ -8,6 +8,8 @@ const MOVES_KEY   = "estoque_pro_moves_v1";
 const PIN_HASH_KEY = "estoque_pro_pin_hash_v1";
 const NOTIF_ENABLED_KEY = "estoque_pro_notif_enabled_v1";
 
+const DEFAULT_PIN = "123"; // PIN inicial padrão (troque depois em Config)
+
 const DEFAULT_LOW_LIMIT = 2;
 const PHOTO_MAX_WIDTH = 900;
 const PHOTO_QUALITY = 0.72;
@@ -1235,6 +1237,13 @@ async function sha256(text){
   return arr.map(b => b.toString(16).padStart(2,"0")).join("");
 }
 
+async function setDefaultPinIfMissing(){
+  // Se não houver PIN salvo, define o PIN padrão "123"
+  // (você pode trocar depois em Config → Salvar PIN)
+  if (localStorage.getItem(PIN_HASH_KEY)) return;
+  await setPin(DEFAULT_PIN);
+}
+
 async function setPin(pin){
   const h = await sha256(pin);
   localStorage.setItem(PIN_HASH_KEY, h);
@@ -1321,5 +1330,12 @@ rebuildGroupSelect(groups.some(g=>normalize(g)==="geral") ? "Geral" : "Sem grupo
 rebuildGroupFilter();
 renderAll();
 
-// Apply lock if PIN set
-if (hasPin()) showLock(); else hideLock();
+
+
+// ====== Bootstrap PIN padrão ======
+(async function bootstrapPinDefault(){
+  try{
+    await setDefaultPinIfMissing();
+  }catch{}
+  if (hasPin()) showLock(); else hideLock();
+})();

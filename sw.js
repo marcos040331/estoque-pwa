@@ -1,4 +1,4 @@
-const CACHE_NAME = "estoque-pro-cache-v6.1";
+const CACHE_NAME = "estoque-pro-cache-v6.2";
 const ASSETS = ["./","./index.html","./style.css","./app.js","./manifest.json","./icon-192.png","./icon-512.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
