@@ -3,38 +3,133 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#111827" />
-  <title>Estoque Offline</title>
+  <meta name="theme-color" content="#0B1220" />
+  <title>Estoque Pro (Offline)</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-<header class="header">
-  <h1>Estoque</h1>
-  <div>
-    <button id="btnBackup">Backup</button>
-    <input id="fileRestore" type="file" accept="application/json">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">EP</div>
+      <div>
+        <div class="brand-title">Estoque Pro</div>
+        <div class="brand-sub">Offline • PWA • CRUD rápido</div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button id="btnBackup" class="btn ghost" type="button" title="Exportar backup (.json)">Backup</button>
+      <label class="btn ghost file" title="Importar backup (.json)">
+        Restaurar
+        <input id="fileRestore" type="file" accept="application/json">
+      </label>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="kpis">
+      <div class="kpi-card">
+        <div class="kpi-title">Produtos</div>
+        <div id="kpiProdutos" class="kpi-value">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Quantidade total</div>
+        <div id="kpiQtd" class="kpi-value">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Baixo estoque</div>
+        <div id="kpiBaixo" class="kpi-value warn">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Valor estimado</div>
+        <div id="kpiValor" class="kpi-value">R$ 0,00</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div class="searchbox">
+          <span class="icon">🔎</span>
+          <input id="search" class="input" type="text" placeholder="Buscar... (modelo, nome, ex: A14, iPhone 11, 3D)">
+        </div>
+
+        <div class="filters">
+          <button id="btnSort" class="btn ghost" type="button" title="Alternar ordenação">
+            Ordenar: <span id="sortLabel">Baixo estoque</span>
+          </button>
+          <button id="btnOnlyLow" class="btn ghost" type="button" title="Mostrar só baixo estoque">
+            <span id="onlyLowLabel">Todos</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="hint">
+        Dica: toque em <b>-1</b> quando vender e <b>+1</b> quando repor. Clique no card para editar.
+      </div>
+
+      <ul id="list" class="grid"></ul>
+    </section>
+  </main>
+
+  <button id="fabAdd" class="fab" type="button" aria-label="Adicionar produto">＋</button>
+
+  <div id="modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-titlebar">
+        <div>
+          <div id="modalTitle" class="modal-title">Novo produto</div>
+          <div id="modalSubtitle" class="modal-subtitle">Cadastro rápido</div>
+        </div>
+        <button id="btnClose" class="btn ghost" type="button" aria-label="Fechar">✕</button>
+      </div>
+
+      <form id="form" class="form">
+        <input type="hidden" id="productId" />
+
+        <div class="grid2">
+          <div>
+            <label class="label">Modelo (ex: A14, iPhone 11)</label>
+            <input id="modelo" class="input" type="text" placeholder="A14" />
+          </div>
+          <div>
+            <label class="label">Nome (ex: Película 3D, Privacidade)</label>
+            <input id="nome" class="input" type="text" placeholder="Película 3D" required />
+          </div>
+        </div>
+
+        <label class="label">Descrição (opcional)</label>
+        <input id="descricao" class="input" type="text" placeholder="Ex: observações..." />
+
+        <div class="grid3">
+          <div>
+            <label class="label">Valor (R$)</label>
+            <input id="valor" class="input" type="number" step="0.01" min="0" placeholder="25.00" required />
+          </div>
+          <div>
+            <label class="label">Quantidade</label>
+            <input id="quantidade" class="input" type="number" step="1" min="0" placeholder="0" required />
+          </div>
+          <div>
+            <label class="label">Baixo estoque (limite)</label>
+            <input id="limite" class="input" type="number" step="1" min="0" placeholder="2" />
+          </div>
+        </div>
+
+        <div class="row end">
+          <button id="btnDelete" class="btn danger hidden" type="button">Excluir</button>
+          <button class="btn ghost" type="button" id="btnCancel">Cancelar</button>
+          <button class="btn primary" type="submit">Salvar</button>
+        </div>
+      </form>
+
+      <div class="modal-footer">
+        <button id="btnMinus" class="btn ghost" type="button">-1 Venda</button>
+        <button id="btnPlus" class="btn ghost" type="button">+1 Repor</button>
+      </div>
+    </div>
   </div>
-</header>
 
-<main>
-  <input id="search" placeholder="Pesquisar produto..." />
-  <button id="btnAdd">+ Adicionar</button>
-  <ul id="list"></ul>
-</main>
-
-<div id="modal" class="hidden">
-  <form id="form">
-    <input type="hidden" id="productId">
-    <input id="descricao" placeholder="Descrição" required>
-    <input id="valor" type="number" step="0.01" placeholder="Valor" required>
-    <input id="quantidade" type="number" step="1" placeholder="Quantidade" required>
-    <button type="submit">Salvar</button>
-    <button type="button" id="btnDelete">Excluir</button>
-    <button type="button" id="btnCancel">Cancelar</button>
-  </form>
-</div>
-
-<script src="./app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
